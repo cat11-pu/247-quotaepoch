@@ -40,6 +40,35 @@ emit("工作计数未超上界 =", first.judged <= first.judged_bound);
 emit("与全量对照差异 =", fingerprint(closed.state) === fingerprint(fullClosed.state) ? 0 : 1);
 
 
+// ---- 七条机检断言：显式调用实现并验证性质，任何一条不成立都计入失败 ----
+const __asserts = [];
+function machineCheck(name, ok) { __asserts.push([name, !!ok]); }
+
+machineCheck("两档预算推进不同", wide.advanced !== first.advanced);
+machineCheck("拆两轮中间态不同", fingerprint(r2.state) !== fingerprint(first.state));
+machineCheck("拆两轮收尾态一致", fingerprint(closedTwoRound.state) === fingerprint(closed.state));
+machineCheck("重放不再推进", replay.advanced === 0);
+machineCheck("工作计数不超事件条数", first.judged <= events.length && first.judged <= first.judged_bound);
+machineCheck("与全量对照为零",
+  fingerprint(closed.state) === fingerprint(fullClosed.state)
+  && fingerprint(closedTwoRound.state) === fingerprint(fullClosed.state));
+machineCheck("收尾前账大于零且收尾后归零",
+  first.pending_before > 0 && closed.pending_ids.length === 0 && closedTwoRound.state.pending.length === 0);
+
+function probeError(probeSpec) {
+  try { step(probeSpec); return null; } catch (error) { return error; }
+}
+const probeWindow = probeError({ state: { epoch: 1, marks: { 1: 3 }, applied: [] }, events: [{ id: 1, part: 1, seq: 99, epoch: 1 }], budget: 5, window: 4 });
+const probeBad = probeError({ state: { epoch: 1, marks: {}, applied: [] }, events: [{ id: 1, part: 1, seq: -1, epoch: 1 }], budget: 5, window: 4 });
+machineCheck("状态型异常探针真调",
+  probeWindow instanceof Error && probeWindow.code === "E_OUT_OF_WINDOW"
+  && probeBad instanceof Error && probeBad.code === "E_BAD_EVENT");
+
+for (const [name, ok] of __asserts) {
+  console.log((ok ? "机检通过 " : "机检失败 ") + name);
+}
+
+
 // ---- 异常路径探针：真调用实现，看它报出什么码（不是从样例里抄）----
 try {
   step({ state: { epoch: 1, marks: { 1: 3 }, applied: [] }, events: [{ id: 1, part: 1, seq: 99, epoch: 1 }], budget: 5, window: 4 });
@@ -82,6 +111,7 @@ function __same(got, want) {
   return JSON.stringify(got) === JSON.stringify(want);
 }
 let __bad = 0;
+for (const [, ok] of __asserts) { if (!ok) __bad += 1; }
 for (const [label, want] of Object.entries(EXPECTED)) {
   const found = __lines.find((pair) => pair[0] === label);
   if (!found) { __bad += 1; console.log("缺失验收项 " + label); continue; }
