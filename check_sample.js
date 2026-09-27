@@ -89,5 +89,37 @@ for (const [label, want] of Object.entries(EXPECTED)) {
   if (__same(got, want)) { console.log("一致 " + label + " = " + JSON.stringify(got)); }
   else { __bad += 1; console.log("不一致 " + label + " 期望 " + JSON.stringify(want) + " 实际 " + JSON.stringify(got)); }
 }
+
+// ---- 七条机检断言（真算、真调；任何一条不成立都算验收失败）----
+function probeCode(specForProbe) {
+  try {
+    step(specForProbe);
+    return null; // 真调却没报错，判失败
+  } catch (error) {
+    return error && error.code ? error.code : null;
+  }
+}
+const machineChecks = [
+  ["两档预算推进不同", first.advanced !== wide.advanced],
+  ["拆两轮中间态不同而收尾态一致",
+    fingerprint(r2.state) !== fingerprint(first.state)
+      && fingerprint(closedTwoRound.state) === fingerprint(closed.state)],
+  ["重放不再推进", replay.advanced === 0],
+  ["工作计数不超事件条数", first.judged <= events.length],
+  ["与全量对照为零", fingerprint(closed.state) === fingerprint(fullClosed.state) && first.full_diff === 0],
+  ["收尾前账大于零且收尾后归零",
+    first.pending_before > 0
+      && Array.isArray(closed.state.pending) && closed.state.pending.length === 0],
+  ["状态型异常探针真调",
+    probeCode({ state: { epoch: 1, marks: { 1: 3 }, applied: [] },
+      events: [{ id: 1, part: 1, seq: 99, epoch: 1 }], budget: 5, window: 4 }) === "E_OUT_OF_WINDOW"
+      && probeCode({ state: { epoch: 1, marks: {}, applied: [] },
+        events: [{ id: 1, part: 1, seq: -1, epoch: 1 }], budget: 5, window: 4 }) === "E_BAD_EVENT"]
+];
+for (const [name, ok] of machineChecks) {
+  if (ok) { console.log("机检通过 " + name); }
+  else { __bad += 1; console.log("机检失败 " + name); }
+}
+
 console.log("验收项 " + (Object.keys(EXPECTED).length - __bad) + "/" + Object.keys(EXPECTED).length + " 通过");
 process.exit(__bad === 0 ? 0 : 1);
