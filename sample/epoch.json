@@ -1,0 +1,19 @@
+{
+  "window_error_code": "E_OUT_OF_WINDOW",
+  "event_error_code": "E_BAD_EVENT",
+  "window": 4,
+  "budget": 8,
+  "state": { "epoch": 1, "marks": {}, "applied": [] },
+  "events": [
+    { "id": 1, "part": 1, "seq": 0, "epoch": 1 },
+    { "id": 2, "part": 1, "seq": 1, "epoch": 1 },
+    { "id": 3, "part": 1, "seq": 2, "epoch": 1 },
+    { "id": 4, "part": 2, "seq": 0, "epoch": 1 },
+    { "id": 5, "part": 1, "seq": 1, "epoch": 1 },
+    { "id": 6, "part": 1, "seq": 5, "epoch": 1 },
+    { "id": 7, "part": 1, "seq": 0, "epoch": 2 },
+    { "id": 8, "part": 1, "seq": 1, "epoch": 2 },
+    { "id": 9, "part": 2, "seq": 0, "epoch": 1 },
+    { "id": 10, "part": 1, "seq": 2, "epoch": 2 }
+  ]
+}
